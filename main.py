@@ -19,8 +19,7 @@ def publish_data():
     pubnub = PubNub(pnconfig)
 
     message = {
-        "name" : "Mudith",
-        "Message" : "Hi how are you"
+        "data" : "hi"
     }
     envelope = pubnub.publish().channel(CHANNEL_NAME).message(message).sync()
     if envelope.status.is_error():
@@ -75,7 +74,7 @@ def positions_get():
                 "volume": positions.volume,
                 "sl": positions.sl,
                 "tp": positions.tp,
-                "trade_type": positions.type
+                "trade_type": "mt5.ORDER_TYPE_BUY" if positions.type == 1 else "mt5.ORDER_TYPE_SELL"
             }
 
             json_data = json.dumps(trade_data)
@@ -96,7 +95,6 @@ def main():
 
     except KeyboardInterrupt:
         print("\nExiting program")
-
 
     mt5.shutdown()
 

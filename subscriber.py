@@ -1,4 +1,5 @@
-import sys
+
+import MetaTrader5 as mt5
 import pubnub.pnconfiguration as PNconfig
 from pubnub.pubnub import PubNub
 from pubnub.callbacks import SubscribeCallback
@@ -14,23 +15,28 @@ pnconfig.subscribe_key = SUBSCRIBE_KEY
 pnconfig.uuid = "device-01"
 pubnub = PubNub(pnconfig)
 
+trade_details = None
 #---Listener---
 class MySubscribeCallback(SubscribeCallback):
-    def message(self, pubnub, event):
+    def message(self,pubnub,event):
+        global trade_details
+        trade_details = event.message
         print(f"[{pnconfig.uuid}] Received message: {event.message}")
 
-
-def recieve_message():
-
-    #add a listener
+def main():
+    # add a listener
     pubnub.add_listener(MySubscribeCallback())
     # ----Subscribe----
-    pubnub.subscribe().channels([CHANNEL_NAME]).execute()
-    print(f"Subscriber {pnconfig.uuid} listening on channel {CHANNEL_NAME}")
+    pubnub.subscribe().channels(CHANNEL_NAME).execute()
+
+    try:
+        while True:
+            if trade_details is not None:
+                print(trade_details)
+    except KeyboardInterrupt:
+        print("Exiting...")
 
 
-def main():
-    recieve_message()
 
 if __name__ == '__main__':
     main()
