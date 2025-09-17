@@ -3,8 +3,8 @@ import MetaTrader5 as mt5
 import pubnub.pnconfiguration as PNconfig
 from pubnub.pubnub import PubNub
 from pubnub.callbacks import SubscribeCallback
+import time
 
-from main import known_tickets
 
 #---Configurations---
 PUBLISH_KEY = "pub-c-56b4bb05-1e9f-4d36-8a00-b51f771a88c9"
@@ -25,66 +25,47 @@ class MySubscribeCallback(SubscribeCallback):
         global trade_details
         trade_details = event.message
         print(f"[{pnconfig.uuid}] Received message: {event.message}")
+        self.opentrade(trade_details)
 
-def is_new_trade():
-    global known_tickets
+    def opentrade(self,data):
+        data = json.loads(data)
+        symbol = data["symbol"]
 
-    try:
-        positions = mt5.positions_get()
-        if positions is None :
-            return False
-        current_ticket = [pos.ticket for pos in positions]
-        new_tickets = [x for x in current_ticket if x not in known_tickets]
-
-        known_tickets = current_ticket
-
-        return len(new_tickets) > 0
-
-    except Exception as e:
-        print(e)
-
-def opentrade(data):
-    data = json.loads(data)
-    symbol = data["symbol"]
-
-    price =mt5.symbol_info_tick(symbol).ask if data['type'] == "mt5.ORDER_TYPE_BUY" \
-        else mt5.symbol_info_tick(symbol).bid
-    request = {
-        "action": mt5.TRADE_ACTION_DEAL,
-        "symbol": symbol,
-        "volume": data['volume'],
-        "type" : mt5.ORDER_TYPE_BUY if data['type'] == "mt5.ORDER_TYPE_BUY" else mt5.ORDER_TYPE_SELL,
-        "price": price,
-        "sl" : data['sl'],
-        "tp" : data['tp'],
-        "deviation" : 10,
-        "comment": "Python Order",
-        "type_time": mt5.ORDER_TIME_GTC,
-        "type_filling": mt5.ORDER_FILLING_IOC,
-    }
-    result = mt5.order_send(request)
-    print(result)
+        price = mt5.symbol_info_tick(symbol).ask if data['type'] == "mt5.ORDER_TYPE_BUY" \
+            else mt5.symbol_info_tick(symbol).bid
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": symbol,
+            "volume": data['volume'],
+            "type": mt5.ORDER_TYPE_BUY if data['type'] == "mt5.ORDER_TYPE_BUY" else mt5.ORDER_TYPE_SELL,
+            "price": price,
+            "sl": data['sl'],
+            "tp": data['tp'],
+            "deviation": 10,
+            "comment": "Python Order",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        result = mt5.order_send(request)
+        print(result)
 
 
 def main():
+    if not mt5.initialize():
+        print("MT5 not initialized")
     # add a listener
     pubnub.add_listener(MySubscribeCallback())
     # ----Subscribe----
     pubnub.subscribe().channels(CHANNEL_NAME).execute()
 
-    if not mt5.initialize():
-        print("MT5 not initialized")
 
     try:
         while True:
-            if trade_details is not None and is_new_trade():
-                opentrade(trade_details)
-
-
+            time.sleep(1)
     except KeyboardInterrupt:
         print("Exiting...")
-    mt5.shutdown()
 
+    mt5.shutdown()
 
 if __name__ == '__main__':
     main()
