@@ -11,17 +11,14 @@ PUBLISH_KEY = "pub-c-56b4bb05-1e9f-4d36-8a00-b51f771a88c9"
 SUBSCRIBE_KEY = "sub-c-37cc5202-f856-4457-b564-1a1c8354d6fa"
 CHANNEL_NAME = "trade.broadcast.room1"
 
-def publish_data():
+def publish_data(data):
     pnconfig = PNconfig.PNConfiguration()
     pnconfig.publish_key = PUBLISH_KEY
     pnconfig.subscribe_key = SUBSCRIBE_KEY
     pnconfig.uuid = "publisher-01"
     pubnub = PubNub(pnconfig)
 
-    message = {
-        "name" : "Mudith",
-        "Message" : "Hi how are you"
-    }
+    message = data
     envelope = pubnub.publish().channel(CHANNEL_NAME).message(message).sync()
     if envelope.status.is_error():
         print(f"Publish error: {envelope.status.error_data}")
@@ -84,7 +81,7 @@ def positions_get():
         print(e)
 
 def main():
-    publish_data()
+
     if not mt5.initialize():
         print("Initialization failed")
     try:
@@ -92,7 +89,7 @@ def main():
 
             if is_new_trade() :
                 trade_data = positions_get()
-
+                publish_data(trade_data)
 
     except KeyboardInterrupt:
         print("\nExiting program")
